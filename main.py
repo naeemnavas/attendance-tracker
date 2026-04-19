@@ -128,18 +128,15 @@ def _scrape_attendance_sync(username: str, password: str, target_pct: float):
 
         try:
             # ── 1. Login ──────────────────────────────────────────────────
-            print(f"[1] Navigating to login page...")
             page.goto(LOGIN_PAGE_URL, wait_until="domcontentloaded", timeout=30000)
 
             page.fill("#UserName", username.strip())
             page.fill("#Password", password)
-            print(f"[2] Submitting login for: {username.strip()}")
             page.click("button[type=submit]")
 
             # Wait for redirect away from login page
             try:
                 page.wait_for_url("**/Student/**", timeout=15000)
-                print(f"[2] Login SUCCESS — now at: {page.url}")
             except PlaywrightTimeout:
                 # Check if we're still on login (wrong credentials)
                 if "login" in page.url.lower():
@@ -148,42 +145,31 @@ def _scrape_attendance_sync(username: str, password: str, target_pct: float):
                     return None, None, f"Login failed: {msg.strip()}"
 
             # ── 2. Navigate to attendance page ────────────────────────────
-            print(f"[3] Navigating to attendance page...")
             page.goto(ATTENDANCE_URL, wait_until="domcontentloaded", timeout=30000)
 
             # ── 3. Wait for AJAX to populate the table ────────────────────
-            print("[3] Waiting for attendance table to load via AJAX...")
             page.wait_for_selector(
                 "#tblsubjectwiseattendence tr",
                 state="attached",
                 timeout=20000
             )
-            print("[3] Table loaded!")
 
             # ── 4. Grab the rendered table HTML ───────────────────────────
             table_html = page.inner_html("#tblsubjectwiseattendence")
-            print(f"[4] Got table HTML ({len(table_html)} chars)")
-
             subjects, total = parse_attendance(table_html, target_pct)
-            print(f"[4] Parsed: {len(subjects) if subjects else 0} subjects, total={total is not None}")
 
             # ── 5. Logout ─────────────────────────────────────────────────
             try:
                 page.goto(LOGOUT_URL, timeout=10000)
-                # Confirm logout by checking we landed back on the login page
-                if "login" in page.url.lower() or "studentlogin" in page.url.lower():
-                    print(f"[5] Logout confirmed — redirected to: {page.url}")
-                else:
-                    print(f"[5] Logout may have failed — ended up at: {page.url}")
             except Exception as ex:
-                print(f"[5] Logout failed: {ex}")  # Browser closes anyway
+                print(f"Logout failed (browser closing anyway): {ex}")
 
             return subjects, total, None
 
         except PlaywrightTimeout:
             return None, None, "The college portal timed out. Please try again."
         except Exception as exc:
-            print(f"[ERROR] {exc}")
+            print(f"Scraper error: {exc}")
             return None, None, f"Unexpected error: {exc}"
         finally:
             browser.close()

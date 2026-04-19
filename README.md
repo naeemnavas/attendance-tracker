@@ -1,8 +1,8 @@
 # 📊 Attendance Tracker
 
-An unofficial attendance checker for SH College students. Enter your student portal credentials and instantly see your subject-wise attendance, how many classes you can skip, or how many you need to attend to hit your target percentage.
+An unofficial attendance checker for College students. Enter your student portal credentials and instantly see your subject-wise attendance, how many classes you can skip, or how many you need to attend to hit your target percentage.
 
-> ⚠️ **Unofficial tool** — not affiliated with SH College or its ERP system. Use at your own risk.
+> ⚠️ **Unofficial tool** — not affiliated with College or its ERP system. Use at your own risk.
 
 ---
 

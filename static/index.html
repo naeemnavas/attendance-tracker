@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Attendance Tracker</title>
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f1726;
+      color: #e2e8f0;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Utility ──────────────────────────────────────────────────── */
+    .hidden { display: none !important; }
+
+    /* ── Screen wrapper ───────────────────────────────────────────── */
+    .screen {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       LOGIN SCREEN
+    ══════════════════════════════════════════════════════════════ */
+    #loginScreen { background: linear-gradient(160deg, #0f1726 0%, #1a2744 100%); }
+
+    .brand {
+      text-align: center;
+      margin-bottom: 1.75rem;
+    }
+    .brand-icon {
+      width: 60px; height: 60px;
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 0.875rem;
+      font-size: 1.6rem;
+    }
+    .brand h1 { font-size: 1.4rem; font-weight: 700; color: #f1f5f9; }
+    .brand p  { font-size: 0.85rem; color: #94a3b8; margin-top: 0.2rem; }
+
+    .card {
+      background: #1e2d4a;
+      border: 1px solid #2d3f5e;
+      border-radius: 16px;
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+
+    .form-group { margin-bottom: 1.1rem; }
+    label {
+      display: block;
+      font-size: 0.775rem;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.45rem;
+    }
+    input {
+      width: 100%;
+      background: #0f1726;
+      border: 1px solid #2d3f5e;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 1rem;         /* 16px — prevents iOS zoom on focus */
+      padding: 0.75rem 0.875rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    input::placeholder { color: #475569; }
+    input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 0.875rem;
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: opacity 0.2s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-primary:hover  { opacity: 0.9; }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .disclaimer {
+      margin-top: 1rem;
+      padding: 0.7rem 0.875rem;
+      background: rgba(245,158,11,0.08);
+      border: 1px solid rgba(245,158,11,0.25);
+      border-radius: 8px;
+      font-size: 0.775rem;
+      color: #fbbf24;
+      line-height: 1.5;
+    }
+    .disclaimer strong { display: block; margin-bottom: 0.15rem; }
+
+    .risk-disclaimer {
+      margin-top: 0.65rem;
+      padding: 0.7rem 0.875rem;
+      background: rgba(239,68,68,0.07);
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 8px;
+      font-size: 0.75rem;
+      color: #fca5a5;
+      line-height: 1.5;
+    }
+    .risk-disclaimer strong { display: block; margin-bottom: 0.15rem; }
+
+    .error-box {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 8px;
+      font-size: 0.875rem;
+      color: #f87171;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       LOADING SCREEN
+    ══════════════════════════════════════════════════════════════ */
+    #loadingScreen { background: #0f1726; }
+
+    .loading-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
+    }
+
+    /* Spinner */
+    .spinner {
+      width: 52px; height: 52px;
+      border: 3px solid #1e2d4a;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.85s linear infinite;
+      margin-bottom: 1.75rem;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Step tracker */
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      width: 100%;
+      margin-bottom: 2rem;
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.6rem 0.875rem;
+      border-radius: 10px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      background: #1a2438;
+      color: #475569;
+      transition: all 0.4s ease;
+    }
+    .step.active {
+      background: rgba(59,130,246,0.12);
+      color: #93c5fd;
+      border: 1px solid rgba(59,130,246,0.25);
+    }
+    .step.done {
+      background: rgba(52,211,153,0.08);
+      color: #6ee7b7;
+      border: 1px solid rgba(52,211,153,0.2);
+    }
+    .step-icon { font-size: 1rem; width: 20px; text-align: center; flex-shrink: 0; }
+
+
+
+    /* ══════════════════════════════════════════════════════════════
+       RESULTS SCREEN
+    ══════════════════════════════════════════════════════════════ */
+    #resultsScreen {
+      background: #0f1726;
+      align-items: stretch;
+      justify-content: flex-start;
+      padding: 0;
+    }
+
+    /* ── Top bar ── */
+    .topbar {
+      background: #1e2d4a;
+      border-bottom: 1px solid #2d3f5e;
+      padding: 0.875rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .topbar-left {
+      flex: 1;
+      min-width: 0;
+    }
+    .topbar-left h2 {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #94a3b8;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .topbar-right { display: flex; gap: 0.5rem; flex-shrink: 0; }
+
+    .btn-icon-text {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: rgba(52,211,153,0.1);
+      border: 1px solid rgba(52,211,153,0.3);
+      border-radius: 8px;
+      color: #34d399;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      padding: 0.5rem 0.75rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-icon-text:hover { background: rgba(52,211,153,0.2); }
+
+    .btn-back {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: transparent;
+      border: 1px solid #2d3f5e;
+      border-radius: 8px;
+      color: #94a3b8;
+      font-size: 0.8125rem;
+      padding: 0.5rem 0.75rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+      white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-back:hover { border-color: #3b82f6; color: #3b82f6; }
+
+    /* Hide label text on small screens, keep icon */
+    .btn-label { display: inline; }
+    @media (max-width: 380px) {
+      .btn-label { display: none; }
+      .btn-icon-text, .btn-back { padding: 0.5rem 0.6rem; }
+    }
+
+    .results-body {
+      padding: 1rem;
+      max-width: 640px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* ── Summary card ── */
+    .summary-card {
+      background: #1e2d4a;
+      border: 1px solid #2d3f5e;
+      border-radius: 14px;
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+    .summary-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .summary-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.2rem; }
+    .summary-pct   { font-size: 2.25rem; font-weight: 800; line-height: 1; }
+    .summary-sub   { font-size: 0.8125rem; color: #94a3b8; margin-top: 0.35rem; }
+    .badge {
+      display: inline-block;
+      padding: 0.3rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge-target { background: rgba(99,102,241,0.15); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.3); }
+
+    /* Progress bar */
+    .prog-wrap { margin-top: 0.875rem; }
+    .prog-labels { display: flex; justify-content: space-between; font-size: 0.7rem; color: #64748b; margin-bottom: 0.35rem; }
+    .prog-track {
+      height: 7px;
+      background: #0f1726;
+      border-radius: 999px;
+      overflow: hidden;
+      position: relative;
+    }
+    .prog-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.8s ease;
+    }
+    .prog-target-line {
+      position: absolute;
+      top: 0; bottom: 0;
+      width: 2px;
+      background: rgba(255,255,255,0.25);
+    }
+
+    /* Status colors */
+    .c-above  { color: #34d399; }
+    .c-below  { color: #f87171; }
+    .c-exact  { color: #fbbf24; }
+    .fill-above { background: linear-gradient(90deg, #059669, #34d399); }
+    .fill-below { background: linear-gradient(90deg, #dc2626, #f87171); }
+    .fill-exact { background: linear-gradient(90deg, #d97706, #fbbf24); }
+
+    /* ── Subject list ── */
+    .section-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.75rem;
+    }
+    .subject-list { display: flex; flex-direction: column; gap: 0.625rem; }
+
+    .subject-card {
+      background: #1e2d4a;
+      border: 1px solid #2d3f5e;
+      border-radius: 12px;
+      padding: 0.875rem 1rem;
+      transition: border-color 0.2s;
+    }
+    .subject-card.status-below { border-left: 3px solid #f87171; }
+    .subject-card.status-above { border-left: 3px solid #34d399; }
+    .subject-card.status-exact { border-left: 3px solid #fbbf24; }
+
+    .sc-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.75rem;
+      margin-bottom: 0.625rem;
+    }
+    .sc-name {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #e2e8f0;
+      line-height: 1.4;
+      flex: 1;
+    }
+    .sc-type {
+      font-size: 0.675rem;
+      font-weight: 600;
+      color: #64748b;
+      background: #0f1726;
+      border-radius: 4px;
+      padding: 0.15rem 0.4rem;
+      white-space: nowrap;
+      margin-top: 0.15rem;
+    }
+    .sc-pct {
+      font-size: 1.375rem;
+      font-weight: 800;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .sc-stats {
+      display: flex;
+      gap: 0.875rem;
+      font-size: 0.775rem;
+      color: #64748b;
+      margin-bottom: 0.75rem;
+      flex-wrap: wrap;
+      row-gap: 0.25rem;
+    }
+    .sc-stats span strong { color: #94a3b8; }
+
+    .sc-action {
+      padding: 0.45rem 0.75rem;
+      border-radius: 7px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .action-below { background: rgba(239,68,68,0.1);   color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+    .action-above { background: rgba(52,211,153,0.1);  color: #34d399; border: 1px solid rgba(52,211,153,0.2); }
+    .action-exact { background: rgba(251,191,36,0.1);  color: #fbbf24; border: 1px solid rgba(251,191,36,0.2); }
+
+    /* Mini progress per subject */
+    .sc-prog { margin-bottom: 0.625rem; }
+    .sc-prog-track {
+      height: 4px;
+      background: #0f1726;
+      border-radius: 999px;
+      overflow: hidden;
+      position: relative;
+    }
+    .sc-prog-fill  { height: 100%; border-radius: 999px; }
+    .sc-prog-target {
+      position: absolute; top: 0; bottom: 0;
+      width: 2px;
+      background: rgba(255,255,255,0.3);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════
+     LOGIN SCREEN
+════════════════════════════════════════════════════════════ -->
+<div id="loginScreen" class="screen">
+  <div class="brand">
+    <div class="brand-icon">📊</div>
+    <h1>Attendance Tracker</h1>
+    <p>Check your semester attendance</p>
+  </div>
+
+  <div class="card">
+    <form id="loginForm" autocomplete="on">
+      <div class="form-group">
+        <label for="username">Student Portal Username</label>
+        <input id="username" type="text" placeholder="Enter your username" autocomplete="username" autocapitalize="off" required />
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input id="password" type="password" placeholder="Your portal password" autocomplete="current-password" required />
+      </div>
+      <div class="form-group">
+        <label for="targetPct">Target Attendance %</label>
+        <input id="targetPct" type="number" min="1" max="99" step="0.5" value="75" inputmode="decimal" required />
+      </div>
+
+      <div class="disclaimer">
+        <strong>🔒 Privacy Notice</strong>
+        Your credentials go directly to the college portal and are <em>never stored</em>. All data is discarded immediately after fetching.
+      </div>
+      <div class="risk-disclaimer">
+        <strong>⚠️ Use At Your Own Risk</strong>
+        This is an unofficial tool, not affiliated with the college or its ERP. By continuing you accept full responsibility.
+      </div>
+
+      <button type="submit" class="btn-primary" id="loginBtn">Check My Attendance →</button>
+      <div id="loginError" class="error-box hidden"></div>
+    </form>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     LOADING SCREEN
+════════════════════════════════════════════════════════════ -->
+<div id="loadingScreen" class="screen hidden">
+  <div class="loading-wrap">
+
+    <div class="spinner"></div>
+
+    <!-- Step tracker -->
+    <div class="steps">
+      <div class="step active" id="step1">
+        <span class="step-icon">🔐</span>
+        <span>Logging in to the portal</span>
+      </div>
+      <div class="step" id="step2">
+        <span class="step-icon">📋</span>
+        <span>Fetching attendance records</span>
+      </div>
+      <div class="step" id="step3">
+        <span class="step-icon">🧮</span>
+        <span>Crunching the numbers</span>
+      </div>
+    </div>
+
+
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     RESULTS SCREEN
+════════════════════════════════════════════════════════════ -->
+<div id="resultsScreen" class="screen hidden">
+  <div class="topbar">
+    <div class="topbar-left">
+      <h2 id="resultStudentId">—</h2>
+    </div>
+    <div class="topbar-right">
+      <button class="btn-icon-text" id="downloadBtn"><span style="line-height:1">⬇</span><span class="btn-label">Save</span></button>
+      <button class="btn-back" id="backBtn"><span>←</span><span class="btn-label">Back</span></button>
+    </div>
+  </div>
+
+  <div class="results-body">
+
+    <div class="summary-card" id="summaryCard">
+      <div class="summary-top">
+        <div>
+          <div class="summary-label">Overall Attendance</div>
+          <div class="summary-pct" id="summaryPct">—</div>
+          <div class="summary-sub" id="summarySub">—</div>
+        </div>
+        <div class="badge badge-target" id="targetBadge">Target: 75%</div>
+      </div>
+      <div class="prog-wrap">
+        <div class="prog-labels">
+          <span>0%</span>
+          <span id="progTargetLabel">75%</span>
+          <span>100%</span>
+        </div>
+        <div class="prog-track">
+          <div class="prog-fill" id="summaryFill" style="width:0%"></div>
+          <div class="prog-target-line" id="summaryTargetLine"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Subject-wise Breakdown</div>
+    <div class="subject-list" id="subjectList"></div>
+
+  </div>
+</div>
+
+<script>
+  // ── DOM refs ──────────────────────────────────────────────────────────────
+  const loginScreen   = document.getElementById('loginScreen');
+  const loadingScreen = document.getElementById('loadingScreen');
+  const resultsScreen = document.getElementById('resultsScreen');
+  const loginForm     = document.getElementById('loginForm');
+  const loginBtn      = document.getElementById('loginBtn');
+  const loginError    = document.getElementById('loginError');
+  const backBtn       = document.getElementById('backBtn');
+  const downloadBtn   = document.getElementById('downloadBtn');
+
+  let currentData   = null;
+  let loadingTimers = [];
+
+  function startQuotes() {}
+  function stopQuotes() {}
+
+  // ── Step animator ─────────────────────────────────────────────────────────
+  function animateSteps() {
+    const s1 = document.getElementById('step1');
+    const s2 = document.getElementById('step2');
+    const s3 = document.getElementById('step3');
+
+    // Reset
+    [s1, s2, s3].forEach(s => { s.className = 'step'; });
+    s1.classList.add('active');
+
+    loadingTimers.push(setTimeout(() => {
+      s1.className = 'step done';
+      s1.querySelector('.step-icon').textContent = '✅';
+      s2.classList.add('active');
+    }, 5000));
+
+    loadingTimers.push(setTimeout(() => {
+      s2.className = 'step done';
+      s2.querySelector('.step-icon').textContent = '✅';
+      s3.classList.add('active');
+    }, 12000));
+  }
+
+  function clearLoadingTimers() {
+    loadingTimers.forEach(clearTimeout);
+    loadingTimers = [];
+  }
+
+  // ── Navigation ────────────────────────────────────────────────────────────
+  function show(screen) {
+    [loginScreen, loadingScreen, resultsScreen].forEach(s => s.classList.add('hidden'));
+    screen.classList.remove('hidden');
+  }
+
+  // ── Back button ───────────────────────────────────────────────────────────
+  backBtn.addEventListener('click', () => {
+    show(loginScreen);
+    loginError.classList.add('hidden');
+    loginBtn.disabled = false;
+    loginBtn.textContent = 'Check My Attendance →';
+  });
+
+  // ── Form submit ───────────────────────────────────────────────────────────
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    loginError.classList.add('hidden');
+    loginBtn.disabled = true;
+    loginBtn.textContent = 'Connecting…';
+    show(loadingScreen);
+    startQuotes();
+    animateSteps();
+
+    const payload = {
+      username:       document.getElementById('username').value.trim(),
+      password:       document.getElementById('password').value,
+      target_percent: parseFloat(document.getElementById('targetPct').value) || 75,
+    };
+
+    try {
+      const res  = await fetch('/api/attendance', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (!res.ok || data.error) throw new Error(data.error || 'Something went wrong. Please try again.');
+
+      clearLoadingTimers();
+      stopQuotes();
+      currentData = data;
+      renderResults(data);
+      show(resultsScreen);
+    } catch (err) {
+      clearLoadingTimers();
+      stopQuotes();
+      show(loginScreen);
+      loginError.textContent = err.message;
+      loginError.classList.remove('hidden');
+      loginBtn.disabled = false;
+      loginBtn.textContent = 'Check My Attendance →';
+    }
+  });
+
+  // ── Render results ────────────────────────────────────────────────────────
+  function renderResults(data) {
+    const target = data.target_percent;
+    const total  = data.total;
+
+    document.getElementById('resultStudentId').textContent = data.student_id;
+    document.getElementById('targetBadge').textContent     = `Target: ${target}%`;
+    document.getElementById('progTargetLabel').textContent = `${target}%`;
+
+    if (total) {
+      const pct    = total.current_pct;
+      const status = total.status;
+      document.getElementById('summaryPct').textContent  = `${pct}%`;
+      document.getElementById('summaryPct').className    = `summary-pct ${colorClass(status)}`;
+
+      let subText = '';
+      if (status === 'below') {
+        const diff = (target - pct).toFixed(2);
+        subText = `🔴 You are ${diff}% below your target of ${target}%`;
+      } else if (status === 'above') {
+        const diff = (pct - target).toFixed(2);
+        subText = `🟢 You are ${diff}% above your target of ${target}%`;
+      } else {
+        subText = `🟡 Exactly at ${target}% — don't miss another class!`;
+      }
+      document.getElementById('summarySub').textContent = subText;
+
+      const fill = document.getElementById('summaryFill');
+      fill.style.width = `${Math.min(pct, 100)}%`;
+      fill.className   = `prog-fill ${fillClass(status)}`;
+      document.getElementById('summaryTargetLine').style.left = `${Math.min(target, 99)}%`;
+    }
+
+    const list = document.getElementById('subjectList');
+    list.innerHTML = '';
+
+    data.subjects.forEach(s => {
+      const card     = document.createElement('div');
+      card.className = `subject-card status-${s.status}`;
+
+      let actionHtml = '';
+      if (s.status === 'below') {
+        actionHtml = `<span class="sc-action action-below">⚠️ Need ${s.classes_needed} more class${s.classes_needed !== 1 ? 'es' : ''}</span>`;
+      } else if (s.status === 'above') {
+        actionHtml = `<span class="sc-action action-above">✅ Can skip ${s.classes_can_skip} class${s.classes_can_skip !== 1 ? 'es' : ''}</span>`;
+      } else {
+        actionHtml = `<span class="sc-action action-exact">⚡ Exactly at target — don't skip!</span>`;
+      }
+
+      card.innerHTML = `
+        <div class="sc-top">
+          <div style="flex:1;min-width:0">
+            <div class="sc-name">${s.subject}</div>
+            <div class="sc-type">${s.type}</div>
+          </div>
+          <div class="sc-pct ${colorClass(s.status)}">${s.current_pct}%</div>
+        </div>
+        <div class="sc-prog">
+          <div class="sc-prog-track">
+            <div class="sc-prog-fill ${fillClass(s.status)}" style="width:${Math.min(s.current_pct,100)}%"></div>
+            <div class="sc-prog-target" style="left:${Math.min(target,99)}%"></div>
+          </div>
+        </div>
+        <div class="sc-stats">
+          <span><strong>Conducted:</strong> ${s.conducted}</span>
+          <span><strong>Present:</strong> ${s.present}</span>
+          <span><strong>Absent:</strong> ${s.absent}</span>
+          ${s.cocurricular > 0 ? `<span><strong>Co-Curr:</strong> ${s.cocurricular}</span>` : ''}
+        </div>
+        ${actionHtml}
+      `;
+      list.appendChild(card);
+    });
+  }
+
+  // ── Download as image ─────────────────────────────────────────────────────
+  downloadBtn.addEventListener('click', () => { if (currentData) generateAttendanceImage(currentData); });
+
+  function generateAttendanceImage(data) {
+    const scale  = 2;
+    const W      = 800;
+    const pad    = 40;
+    const colGap = 20;
+    const colW   = (W - pad * 2 - colGap) / 2;
+    const rowH   = 52;
+
+    const subjects   = data.subjects;
+    const canSkip    = subjects.filter(s => s.status === 'above');
+    const mustAttend = subjects.filter(s => s.status === 'below' || s.status === 'exact');
+    const maxRows    = Math.max(canSkip.length, mustAttend.length, 1);
+    const bodyH      = 68 + maxRows * rowH;
+    const totalH     = 140 + bodyH + 56;
+
+    const canvas   = document.createElement('canvas');
+    canvas.width   = W * scale;
+    canvas.height  = totalH * scale;
+    const ctx      = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+
+    ctx.fillStyle = '#0f1726';
+    ctx.fillRect(0, 0, W, totalH);
+
+    // Header gradient
+    const grad = ctx.createLinearGradient(0, 0, W, 0);
+    grad.addColorStop(0, '#1e3a5f');
+    grad.addColorStop(1, '#1e2d4a');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, 130);
+
+    ctx.fillStyle = '#60a5fa';
+    ctx.font = 'bold 13px -apple-system, sans-serif';
+    ctx.fillText('ATTENDANCE SUMMARY', pad, 34);
+
+    ctx.fillStyle = '#f1f5f9';
+    ctx.font = 'bold 26px -apple-system, sans-serif';
+    ctx.fillText(data.student_id, pad, 68);
+
+    const total    = data.total;
+    const pctColor = total ? (total.status==='above'?'#34d399':total.status==='below'?'#f87171':'#fbbf24') : '#94a3b8';
+    ctx.fillStyle  = pctColor;
+    ctx.font       = 'bold 20px -apple-system, sans-serif';
+    ctx.fillText(`Overall: ${total ? total.current_pct+'%' : '—'}`, pad, 100);
+
+    const pillTxt = `Target: ${data.target_percent}%`;
+    ctx.font = '600 13px -apple-system, sans-serif';
+    const pillW = ctx.measureText(pillTxt).width + 20;
+    ctx.fillStyle = 'rgba(99,102,241,0.25)';
+    roundRect(ctx, W-pad-pillW, 82, pillW, 26, 13); ctx.fill();
+    ctx.fillStyle = '#a5b4fc';
+    ctx.fillText(pillTxt, W-pad-pillW+10, 99);
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = '12px -apple-system, sans-serif';
+    ctx.fillText(new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}), pad, 122);
+
+    // Column headers
+    const bodyY = 140;
+    ctx.fillStyle = 'rgba(52,211,153,0.15)';
+    roundRect(ctx, pad, bodyY, colW, 44, 10); ctx.fill();
+    ctx.strokeStyle = 'rgba(52,211,153,0.35)'; ctx.lineWidth = 1;
+    roundRect(ctx, pad, bodyY, colW, 44, 10); ctx.stroke();
+    ctx.fillStyle = '#34d399'; ctx.font = 'bold 13px -apple-system, sans-serif';
+    ctx.fillText('✅  CAN SKIP', pad+14, bodyY+27);
+
+    const col2X = pad+colW+colGap;
+    ctx.fillStyle = 'rgba(239,68,68,0.12)';
+    roundRect(ctx, col2X, bodyY, colW, 44, 10); ctx.fill();
+    ctx.strokeStyle = 'rgba(239,68,68,0.3)';
+    roundRect(ctx, col2X, bodyY, colW, 44, 10); ctx.stroke();
+    ctx.fillStyle = '#f87171'; ctx.font = 'bold 13px -apple-system, sans-serif';
+    ctx.fillText('⚠️  MUST ATTEND', col2X+14, bodyY+27);
+
+    // Rows
+    const rowsY = bodyY + 56;
+    for (let i = 0; i < maxRows; i++) {
+      const y = rowsY + i*rowH;
+      if (i%2===0) { ctx.fillStyle='rgba(255,255,255,0.02)'; ctx.fillRect(pad,y,W-pad*2,rowH-4); }
+
+      if (canSkip[i]) {
+        const s = canSkip[i];
+        ctx.fillStyle='#e2e8f0'; ctx.font='13px -apple-system, sans-serif';
+        ctx.fillText(truncate(ctx,s.subject,colW-80,'13px'), pad+10, y+20);
+        ctx.fillStyle='#64748b'; ctx.font='11px -apple-system, sans-serif';
+        ctx.fillText(`${s.current_pct}%`, pad+10, y+37);
+        const t=`Skip ${s.classes_can_skip}`;
+        ctx.font='bold 12px -apple-system, sans-serif';
+        const tw=ctx.measureText(t).width+16;
+        ctx.fillStyle='rgba(52,211,153,0.15)';
+        roundRect(ctx,pad+colW-tw-4,y+10,tw,24,6); ctx.fill();
+        ctx.fillStyle='#34d399'; ctx.fillText(t,pad+colW-tw-4+8,y+26);
+      } else if (i===0&&canSkip.length===0) {
+        ctx.fillStyle='#475569'; ctx.font='12px -apple-system, sans-serif';
+        ctx.fillText('No subjects safe to skip',pad+10,y+24);
+      }
+
+      ctx.strokeStyle='#1e2d4a'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(pad+colW+colGap/2,y); ctx.lineTo(pad+colW+colGap/2,y+rowH-4); ctx.stroke();
+
+      if (mustAttend[i]) {
+        const s = mustAttend[i];
+        ctx.fillStyle='#e2e8f0'; ctx.font='13px -apple-system, sans-serif';
+        ctx.fillText(truncate(ctx,s.subject,colW-80,'13px'), col2X+10, y+20);
+        ctx.fillStyle='#64748b'; ctx.font='11px -apple-system, sans-serif';
+        ctx.fillText(`${s.current_pct}%`, col2X+10, y+37);
+        const lbl = s.status==='exact'?'At target!': `Attend ${s.classes_needed}`;
+        const lc  = s.status==='exact'?'#fbbf24':'#f87171';
+        const lb  = s.status==='exact'?'rgba(251,191,36,0.12)':'rgba(239,68,68,0.12)';
+        ctx.font='bold 12px -apple-system, sans-serif';
+        const lw=ctx.measureText(lbl).width+16;
+        ctx.fillStyle=lb; roundRect(ctx,col2X+colW-lw-4,y+10,lw,24,6); ctx.fill();
+        ctx.fillStyle=lc; ctx.fillText(lbl,col2X+colW-lw-4+8,y+26);
+      } else if (i===0&&mustAttend.length===0) {
+        ctx.fillStyle='#475569'; ctx.font='12px -apple-system, sans-serif';
+        ctx.fillText('All subjects on track!',col2X+10,y+24);
+      }
+    }
+
+    // Footer
+    const footY = totalH-56;
+    ctx.strokeStyle='#1e2d4a'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(pad,footY+8); ctx.lineTo(W-pad,footY+8); ctx.stroke();
+    ctx.fillStyle='#334155'; ctx.font='11px -apple-system, sans-serif';
+    ctx.fillText('Attendance Tracker  •  Unofficial tool — use at your own risk', pad, footY+32);
+
+    const link = document.createElement('a');
+    link.download = `attendance_${data.student_id}_${new Date().toISOString().slice(0,10)}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }
+
+  function roundRect(ctx,x,y,w,h,r) {
+    ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+    ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
+  }
+
+  function truncate(ctx,text,maxW,size) {
+    ctx.font=`${size} -apple-system, sans-serif`;
+    if(ctx.measureText(text).width<=maxW) return text;
+    let out=text;
+    while(ctx.measureText(out+'…').width>maxW&&out.length>0) out=out.slice(0,-1);
+    return out+'…';
+  }
+
+  function colorClass(s) { return s==='above'?'c-above':s==='below'?'c-below':'c-exact'; }
+  function fillClass(s)  { return s==='above'?'fill-above':s==='below'?'fill-below':'fill-exact'; }
+</script>
+</body>
+</html>

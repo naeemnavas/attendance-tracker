@@ -1,0 +1,32 @@
+# ── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# ── Virtual environment ──────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+
+# ── Playwright browser binaries (installed at build time on Render) ──────────
+# Uncomment below if you ever cache them locally — don't commit them
+# .playwright/
+
+# ── Environment / secrets ────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Debug / scratch files ────────────────────────────────────────────────────
+debug_attendance.html
+
+# ── OS / editor clutter ──────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp

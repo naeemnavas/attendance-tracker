@@ -119,7 +119,9 @@ def parse_attendance(html: str, target_pct: float):
 # Playwright scraper — runs a real headless browser so AJAX executes
 # ---------------------------------------------------------------------------
 
-_executor = ThreadPoolExecutor(max_workers=4)
+_executor   = ThreadPoolExecutor(max_workers=1)
+_semaphore  = asyncio.Semaphore(1)  # One browser at a time on the free tier
+_queue_size = 0                     # Total requests currently in system (waiting + active)
 
 def _scrape_attendance_sync(username: str, password: str, target_pct: float):
     with sync_playwright() as p:
@@ -176,10 +178,16 @@ def _scrape_attendance_sync(username: str, password: str, target_pct: float):
 
 
 async def scrape_attendance(username: str, password: str, target_pct: float):
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(
-        _executor, _scrape_attendance_sync, username, password, target_pct
-    )
+    global _queue_size
+    _queue_size += 1
+    try:
+        async with _semaphore:
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(
+                _executor, _scrape_attendance_sync, username, password, target_pct
+            )
+    finally:
+        _queue_size = max(0, _queue_size - 1)
 
 
 # ---------------------------------------------------------------------------
@@ -229,6 +237,14 @@ async def root():
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/api/queue")
+async def queue_info():
+    """How many requests are currently in the system (waiting + active)."""
+    ahead = max(0, _queue_size)          # before your request is counted
+    est   = ahead * 25                   # ~25 s per scrape
+    return {"ahead": ahead, "est_wait_seconds": est}
 
 @app.get("/.well-known/appspecific/com.chrome.devtools.json")
 async def devtools_stub():
